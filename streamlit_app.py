@@ -137,7 +137,7 @@ if uploaded_file:
         # Run Grad-CAM with target layer specified
         explainer = GradCAM()
         explanation = explainer.explain(
-            validation_data=(image, None),
+            validation_data=(img_array, None),
             model=model,
             class_index=predicted_class,
             layer_name="block5_conv3"  # specify last conv layer in VGG16
@@ -145,7 +145,7 @@ if uploaded_file:
         
         # Show Grad-CAM result
         plt.imshow(explanation)
-        plt.title(f"Predicted: {predicted_class}, True: {true_label}")
+        # plt.title(f"Predicted: {predicted_class}, True: {true_label}")
         plt.axis('off')
         plt.show()
 
