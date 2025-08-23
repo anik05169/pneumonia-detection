@@ -23,9 +23,6 @@ def preprocess_image(image: Image.Image, target_size=(224, 224)):
 
 
 def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
-    """
-    Generate a Grad-CAM heatmap for the predicted class.
-    """
     grad_model = tf.keras.models.Model(
         [model.inputs],
         [model.get_layer(last_conv_layer_name).output, model.output]
@@ -34,15 +31,12 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array)
 
-        # Ensure predictions is tensor
-        if not isinstance(predictions, tf.Tensor):
-            predictions = tf.convert_to_tensor(predictions)
+        # Convert predicted index to Python int
+        pred_index = int(tf.argmax(predictions[0]).numpy())
 
-        # Convert predicted class index to Python int
-        pred_index = tf.argmax(predictions[0]).numpy()
-        class_channel = predictions[:, pred_index]
+        # Use TensorFlow indexing
+        class_channel = predictions[:, tf.constant(pred_index)]
 
-    # Gradient of predicted class wrt conv layer
     grads = tape.gradient(class_channel, conv_outputs)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
@@ -50,12 +44,12 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
     heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
     heatmap = tf.squeeze(heatmap)
 
-    # Normalize safely
     heatmap = np.maximum(heatmap, 0)
     if np.max(heatmap) != 0:
         heatmap /= np.max(heatmap)
 
     return heatmap.numpy()
+
 
 
 
