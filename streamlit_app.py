@@ -4,8 +4,8 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import cv2
-
-
+from tf_explain.core.grad_cam import GradCAM
+import matplotlib.pyplot as plt
 
 MODEL_PATH = "new_sevensix.h5"
 
@@ -24,63 +24,24 @@ def preprocess_image(image: Image.Image, target_size=(224, 224)):
 
 
 
-def make_gradcam_heatmap(img_array, model, last_conv_layer_name=None, class_index=None):
-    """
-    Generate a Grad-CAM heatmap using pure TensorFlow.
+def make_gradcam_heatmap(image, model):
+    # Ensure image has batch dimension
+    if len(image.shape) == 3:
+        image = np.expand_dims(image, axis=0)
 
-    Args:
-        img_array (np.ndarray): Preprocessed input image of shape (1, H, W, 3).
-        model (tf.keras.Model): Trained model.
-        last_conv_layer_name (str): Conv layer to use for Grad-CAM. 
-                                    If None, picks last Conv2D layer automatically.
-        class_index (int): Target class index. If None, uses predicted class.
+    # Predict
+    pred = model.predict(image)
+    predicted_class = np.argmax(pred[0])  # use first element of batch
 
-    Returns:
-        np.ndarray: Heatmap (H, W), normalized to [0,1].
-    """
-    # Auto-detect last Conv2D layer if not provided
-    if last_conv_layer_name is None:
-        for layer in reversed(model.layers):
-            if isinstance(layer, tf.keras.layers.Conv2D):
-                last_conv_layer_name = layer.name
-                break
-        if last_conv_layer_name is None:
-            raise ValueError("No Conv2D layer found in the model.")
-
-    grad_model = tf.keras.models.Model(
-        [model.inputs],
-        [model.get_layer(last_conv_layer_name).output, model.output]
+    # Grad-CAM
+    explainer = GradCAM()
+    explanation = explainer.explain(
+        validation_data=(image, None),
+        model=model,
+        class_index=predicted_class,
+        layer_name="block5_conv3"
     )
-
-    with tf.GradientTape() as tape:
-        conv_outputs, predictions = grad_model(img_array)
-
-        # Handle binary vs multi-class
-        if predictions.shape[-1] == 1:  # Binary (sigmoid output)
-            if class_index is None:
-                class_channel = predictions[:, 0]
-            else:
-                class_channel = predictions[:, 0] if class_index == 1 else 1 - predictions[:, 0]
-        else:  # Multi-class (softmax output)
-            if class_index is None:
-                class_index = tf.argmax(predictions[0])
-            class_channel = predictions[:, class_index]
-
-    grads = tape.gradient(class_channel, conv_outputs)
-
-    # Global average pooling of gradients
-    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-
-    conv_outputs = conv_outputs[0]
-    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
-    heatmap = tf.squeeze(heatmap)
-
-    # Normalize to [0,1]
-    heatmap = np.maximum(heatmap, 0)
-    if np.max(heatmap) > 0:
-        heatmap /= np.max(heatmap)
-
-    return heatmap
+    return explanation
 
 
 
@@ -132,7 +93,8 @@ if uploaded_file:
 
        
         st.subheader("Grad-CAM Visualization")
-        heatmap = make_gradcam_heatmap(img_array, model)
+        
+        heatmap = make_gradcam_heatmap(image, model)
         gradcam_img = overlay_heatmap(image, heatmap)
         st.image(gradcam_img, caption="Grad-CAM", use_container_width=True)
 
