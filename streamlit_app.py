@@ -22,30 +22,47 @@ def preprocess_image(image: Image.Image, target_size=(224, 224)):
     return np.expand_dims(img_array, axis=0)
 
 
-def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
-    grad_model = tf.keras.models.Model(
-        [model.inputs],
-        [model.get_layer(last_conv_layer_name).output, model.output]
+from tf_explain.core.grad_cam import GradCAM
+import numpy as np
+
+def make_gradcam_heatmap(img_array, model, class_index=None, last_conv_layer_name=None):
+    """
+    Generate a Grad-CAM heatmap using tf-explain.
+
+    Args:
+        img_array (np.ndarray): Preprocessed input image of shape (1, H, W, 3).
+        model (tf.keras.Model): Trained model.
+        class_index (int): Target class index (if None, will use model prediction).
+        last_conv_layer_name (str): Conv layer to use for Grad-CAM. 
+                                    If None, picks last Conv2D layer automatically.
+
+    Returns:
+        np.ndarray: Grad-CAM heatmap (H, W, 3) in uint8.
+    """
+    # Pick class index automatically if not provided
+    if class_index is None:
+        preds = model.predict(img_array)
+        class_index = np.argmax(preds[0])
+
+    # Auto-detect last Conv2D layer if not provided
+    if last_conv_layer_name is None:
+        for layer in reversed(model.layers):
+            if isinstance(layer, tf.keras.layers.Conv2D):
+                last_conv_layer_name = layer.name
+                break
+        if last_conv_layer_name is None:
+            raise ValueError("No Conv2D layer found in the model.")
+
+    explainer = GradCAM()
+    explanation = explainer.explain(
+        validation_data=(img_array, None),
+        model=model,
+        class_index=class_index,
+        layer_name=last_conv_layer_name
     )
 
-    with tf.GradientTape() as tape:
-        conv_outputs, predictions = grad_model(img_array)
-        pred_index = tf.argmax(predictions[0])   # no .numpy()
-        class_channel = tf.gather(predictions, pred_index, axis=1)
+    return explanation
 
-
-    grads = tape.gradient(class_channel, conv_outputs)
-    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
-
-    conv_outputs = conv_outputs[0]
-    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
-    heatmap = tf.squeeze(heatmap)
-
-    heatmap = np.maximum(heatmap, 0)
-    if np.max(heatmap) != 0:
-        heatmap /= np.max(heatmap)
-
-    return np.array(heatmap)
 
 
 
