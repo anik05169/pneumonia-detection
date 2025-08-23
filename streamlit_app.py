@@ -45,7 +45,7 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
     if np.max(heatmap) != 0:
         heatmap /= np.max(heatmap)
 
-    return heatmap.numpy()
+    return np.array(heatmap)
 
 
 
