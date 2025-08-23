@@ -31,15 +31,17 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
 
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array)
-        pred_index = tf.argmax(predictions[0])  
+
+        if not isinstance(predictions, tf.Tensor):
+            predictions = tf.convert_to_tensor(predictions)
+
+        pred_index = tf.argmax(predictions[0])
         class_channel = predictions[:, pred_index]
 
-    
-    grads = tape.gradient(class_channel, conv_outputs)    
+    grads = tape.gradient(class_channel, conv_outputs)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
     conv_outputs = conv_outputs[0]
-    
     heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
     heatmap = tf.squeeze(heatmap)
 
@@ -48,6 +50,7 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
         heatmap /= np.max(heatmap)
 
     return heatmap.numpy()
+
 
 
 def overlay_heatmap(original_img, heatmap, alpha=0.4):
