@@ -22,7 +22,7 @@ This project implements a **ternary classifier** to detect **Normal, Bacterial P
 
 ---
 
-## 🏗 Model Architecture
+## Model Architecture
 
 * **Base Model:** VGG16 (pretrained on ImageNet, frozen)
 * **Custom Layers:**
