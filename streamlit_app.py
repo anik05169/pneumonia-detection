@@ -118,36 +118,7 @@ if uploaded_file:
         """)
 
        
-        st.markdown("""
-        **Grad-CAM** (Gradient-weighted Class Activation Mapping) shows
-        which regions of the X-ray most influenced the model’s decision.
-        Warmer colors indicate higher importance.
-        """)
 
-       
-        st.subheader("Grad-CAM Visualization")
-        
-        # heatmap = make_gradcam_heatmap(image, model)
-        # gradcam_img = overlay_heatmap(image, heatmap)
-        # st.image(gradcam_img, caption="Grad-CAM", use_container_width=True)
-        img_array = preprocess_image(image, target_size=(224,224))  # adjust size to model.input_shape
-        pred = model.predict(img_array)
-        predicted_class = np.argmax(pred[0])
-        
-        # Run Grad-CAM with target layer specified
-        explainer = GradCAM()
-        explanation = explainer.explain(
-            validation_data=(img_array, None),
-            model=model,
-            class_index=predicted_class,
-            layer_name="block5_conv3"  # specify last conv layer in VGG16
-        )
-        
-        # Show Grad-CAM result
-        plt.imshow(explanation)
-        # plt.title(f"Predicted: {predicted_class}, True: {true_label}")
-        plt.axis('off')
-        plt.show()
 
        
         st.markdown("""
