@@ -108,7 +108,7 @@ streamlit run streamli_app.py
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
 pip install -r requirements.txt
@@ -126,7 +126,7 @@ Main dependencies:
 
 ---
 
-## ⚠ Disclaimer
+##  Disclaimer
 
 This project is for **educational and research purposes only**. It is **not a substitute for professional medical advice, diagnosis, or treatment**. Always consult a qualified healthcare provider for medical concerns.
 
