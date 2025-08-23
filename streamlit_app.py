@@ -113,9 +113,26 @@ if uploaded_file:
        
         st.subheader("Grad-CAM Visualization")
         
-        heatmap = make_gradcam_heatmap(image, model)
-        gradcam_img = overlay_heatmap(image, heatmap)
-        st.image(gradcam_img, caption="Grad-CAM", use_container_width=True)
+        # heatmap = make_gradcam_heatmap(image, model)
+        # gradcam_img = overlay_heatmap(image, heatmap)
+        # st.image(gradcam_img, caption="Grad-CAM", use_container_width=True)
+        pred = model.predict(image)
+        predicted_class = np.argmax(pred)
+        
+        # Run Grad-CAM with target layer specified
+        explainer = GradCAM()
+        explanation = explainer.explain(
+            validation_data=(image, None),
+            model=model,
+            class_index=predicted_class,
+            layer_name="block5_conv3"  # specify last conv layer in VGG16
+        )
+        
+        # Show Grad-CAM result
+        plt.imshow(explanation)
+        plt.title(f"Predicted: {predicted_class}, True: {true_label}")
+        plt.axis('off')
+        plt.show()
 
        
         st.markdown("""
