@@ -1,55 +1,145 @@
-# pneumonia-detection
-A ternary classification system using chest X-ray images to detect Pneumonia (classifying as Normal, Bacterial Pneumonia, or Viral Pneumonia) built with a Streamlit web app interface.
+#  Pneumonia Detection (Normal / Bacterial / Viral)
 
-## Live Demo
-Try it out online: [Live Streamlit App](https://pneumonia-detection-ubmzr64qnwp3x4nthx8d84.streamlit.app/) :contentReference[oaicite:0]{index=0}
-
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Dataset](#dataset)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Model Training](#model-training)
-- [Evaluation](#evaluation)
-- [Deployment](#deployment)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+This project implements a **ternary classifier** to detect **Normal, Bacterial Pneumonia, and Viral Pneumonia** from chest X-ray images using **Transfer Learning (VGG16)**. It also provides **explainability** via **Grad-CAM visualizations**, and an interactive **Streamlit web app** for uploading and classifying X-ray images.
 
 ---
 
-## Overview
-This project implements a deep learning model to classify chest X-ray images into one of three classes—Normal, Bacterial Pneumonia, or Viral Pneumonia—and features a Streamlit-based web interface for easy user interaction and visualization.
+## Dataset Preparation
 
-## Features
-- Multi-class image classification (Normal, Bacterial, Viral)
-- Interactive web interface built with Streamlit
-- Real-time image upload and classification
-- Visual feedback, such as probability scores or attention maps (if included)
-- Easy-to-use deployment for demonstration or prototyping
+1. Download and unzip your dataset into Google Drive.
+2. Mount Google Drive in Colab:
 
-## Architecture
-- **Model:** _(e.g., CNN base, transfer learning with ResNet, custom model)_  
-- **Training:** Implemented via Jupyter or notebook files (e.g., `classification_code.ipynb`)  
-- **Interface:** Streamlit application (`streamlit_app.py`) that loads a pre-trained model (`new_sevensix.h5`) to handle user uploads and display results
+   ```python
+   from google.colab import drive
+   drive.mount('/content/drive')
+   ```
+3. Unzip the dataset:
 
-## Dataset
-- Dataset source (e.g., Kaggle, NIH, RSNA)  
-- Data organization (e.g., `train/`, `val/`, `test/`)  
-- Number of samples per class  
-- Preprocessing steps (resizing, normalization, augmentation, etc.)
+   ```bash
+   !unzip -q "/content/drive/MyDrive/images.zip" -d /content/pneumonia_data
+   ```
+4. Reorganize dataset into three categories (`NORMAL`, `BACTERIAL`, `VIRAL`) inside `train`, `val`, and `test` directories.
 
-*(Include specifics or update this section once you have dataset details.)*
+---
 
-## Requirements
-Create a `requirements.txt` (already present) containing required packages like:
+## 🏗 Model Architecture
+
+* **Base Model:** VGG16 (pretrained on ImageNet, frozen)
+* **Custom Layers:**
+
+  * Flatten
+  * Dense (128, ReLU)
+  * Dropout (0.5)
+  * Dense (3, Softmax)
+* **Optimizer:** Adam (lr=1e-4)
+* **Loss:** Categorical Crossentropy
+* **Metrics:** Accuracy
+
+---
+
+##  Training
+
+```python
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=20,
+    callbacks=[early_stop, checkpoint]
+)
+```
+
+* **EarlyStopping** with patience=3
+* **ModelCheckpoint** to save best model (`best_model.h5`)
+
+---
+
+##  Evaluation
+
+```python
+predictions = model.predict(test_data)
+y_pred = np.argmax(predictions, axis=1)
+y_true = test_data.classes
+
+print(classification_report(y_true, y_pred, target_names=class_labels))
+```
+
+* Generates **Confusion Matrix** and **Classification Report**.
+
+---
+
+## Explainability with Grad-CAM
+
+We use **Grad-CAM** to highlight regions of the X-ray that contributed most to the model's prediction.
+
+```python
+from tf_explain.core.grad_cam import GradCAM
+explainer = GradCAM()
+explanation = explainer.explain(
+    validation_data=(image, None),
+    model=model,
+    class_index=predicted_class,
+    layer_name="block5_conv3"
+)
+```
+
+* Bright (red/yellow) = Important regions
+* Cool (blue/green) = Less important regions
+
+---
+
+##  Streamlit Web App
+
+Run locally:
+
 ```bash
-streamlit
-tensorflow  # or keras
-numpy
-pillow
-...
+streamlit run streamli_app.py
+```
+
+### Features
+
+* Upload a chest X-ray (JPG/PNG)
+* Classify as:
+
+  * **Normal**
+  * **Bacterial Pneumonia**
+  * **Viral Pneumonia**
+* Show **class probabilities**
+* Overlay **Grad-CAM heatmap** for interpretability
+
+---
+
+## 📦 Installation
+
+```bash
+pip install -r requirements.txt
+```
+
+Main dependencies:
+
+* TensorFlow / Keras
+* NumPy
+* Matplotlib
+* scikit-learn
+* OpenCV
+* tf-explain
+* Streamlit
+
+---
+
+## ⚠ Disclaimer
+
+This project is for **educational and research purposes only**. It is **not a substitute for professional medical advice, diagnosis, or treatment**. Always consult a qualified healthcare provider for medical concerns.
+
+---
+
+## Repository
+
+GitHub: [anik05169/pneumonia-detection](https://github.com/anik05169/pneumonia-detection)
+
+---
+
+## To-Do
+
+* [ ] Improve accuracy with fine-tuning
+* [ ] Add more data augmentation
+* [ ] Support Grad-CAM on uploaded images
