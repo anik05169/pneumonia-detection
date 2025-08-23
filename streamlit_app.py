@@ -24,24 +24,43 @@ def preprocess_image(image: Image.Image, target_size=(224, 224)):
 
 
 
-def make_gradcam_heatmap(image, model):
-    # Ensure image has batch dimension
+import numpy as np
+
+def make_gradcam_heatmap(image, model, last_conv_layer_name="block5_conv3", class_index=None):
+    # Convert PIL -> NumPy
+    if not isinstance(image, np.ndarray):
+        image = np.array(image)
+
+    # Ensure batch dimension
     if len(image.shape) == 3:
         image = np.expand_dims(image, axis=0)
 
     # Predict
     pred = model.predict(image)
-    predicted_class = np.argmax(pred[0])  # use first element of batch
+    if class_index is None:
+        class_index = np.argmax(pred[0])
 
-    # Grad-CAM
-    explainer = GradCAM()
-    explanation = explainer.explain(
-        validation_data=(image, None),
-        model=model,
-        class_index=predicted_class,
-        layer_name="block5_conv3"
+    # Build grad model
+    grad_model = tf.keras.models.Model(
+        [model.inputs], 
+        [model.get_layer(last_conv_layer_name).output, model.output]
     )
-    return explanation
+
+    with tf.GradientTape() as tape:
+        conv_outputs, predictions = grad_model(image)
+        loss = predictions[:, class_index]
+
+    grads = tape.gradient(loss, conv_outputs)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+    conv_outputs = conv_outputs[0]
+    heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+
+    # Normalize heatmap
+    heatmap = np.maximum(heatmap, 0)
+    heatmap /= np.max(heatmap) + 1e-8
+
+    return heatmap
+
 
 
 
