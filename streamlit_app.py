@@ -54,9 +54,17 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name=None, class_inde
 
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array)
-        if class_index is None:
-            class_index = tf.argmax(predictions[0])
-        class_channel = predictions[:, class_index]
+
+        # Handle binary vs multi-class
+        if predictions.shape[-1] == 1:  # Binary (sigmoid output)
+            if class_index is None:
+                class_channel = predictions[:, 0]
+            else:
+                class_channel = predictions[:, 0] if class_index == 1 else 1 - predictions[:, 0]
+        else:  # Multi-class (softmax output)
+            if class_index is None:
+                class_index = tf.argmax(predictions[0])
+            class_channel = predictions[:, class_index]
 
     grads = tape.gradient(class_channel, conv_outputs)
 
