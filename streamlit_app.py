@@ -35,7 +35,7 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
         if not isinstance(predictions, tf.Tensor):
             predictions = tf.convert_to_tensor(predictions)
 
-        pred_index = tf.argmax(predictions[0])
+        pred_index = int(tf.argmax(predictions[0]))
         class_channel = predictions[:, pred_index]
 
     grads = tape.gradient(class_channel, conv_outputs)
