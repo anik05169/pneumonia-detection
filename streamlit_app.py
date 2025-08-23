@@ -23,8 +23,6 @@ def preprocess_image(image: Image.Image, target_size=(224, 224)):
     return np.expand_dims(img_array, axis=0)
 
 
-from tf_explain.core.grad_cam import GradCAM
-import numpy as np
 
 def make_gradcam_heatmap(img_array, model, last_conv_layer_name=None, class_index=None):
     """
