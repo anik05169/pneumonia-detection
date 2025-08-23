@@ -60,13 +60,27 @@ def make_gradcam_heatmap(image, model, last_conv_layer_name="block5_conv3", clas
     heatmap /= np.max(heatmap) + 1e-8
 
     return heatmap
+def preprocess_image(image, target_size=(224, 224)):
 
+    if not isinstance(image, np.ndarray):
+        image = np.array(image)
 
+    # If grayscale, convert to RGB
+    if len(image.shape) == 2:  # (H, W)
+        image = np.stack((image,)*3, axis=-1)
+    elif image.shape[-1] == 1:  # (H, W, 1)
+        image = np.concatenate([image]*3, axis=-1)
 
+    # Resize to target size
+    image = tf.image.resize(image, target_size).numpy()
 
+    # Normalize
+    image = image.astype("float32") / 255.0
 
+    # Add batch dimension
+    image = np.expand_dims(image, axis=0)
 
-
+    return image
 
 def overlay_heatmap(original_img, heatmap, alpha=0.4):
     original_img = original_img.convert("RGB")  
@@ -116,8 +130,9 @@ if uploaded_file:
         # heatmap = make_gradcam_heatmap(image, model)
         # gradcam_img = overlay_heatmap(image, heatmap)
         # st.image(gradcam_img, caption="Grad-CAM", use_container_width=True)
-        pred = model.predict(image)
-        predicted_class = np.argmax(pred)
+        img_array = preprocess_image(image, target_size=(224,224))  # adjust size to model.input_shape
+        pred = model.predict(img_array)
+        predicted_class = np.argmax(pred[0])
         
         # Run Grad-CAM with target layer specified
         explainer = GradCAM()
