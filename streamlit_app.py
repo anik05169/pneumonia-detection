@@ -31,7 +31,8 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="block5_conv3"):
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array)
         pred_index = tf.argmax(predictions[0])   # no .numpy()
-        class_channel = predictions[:, pred_index]
+        class_channel = tf.gather(predictions, pred_index, axis=1)
+
 
     grads = tape.gradient(class_channel, conv_outputs)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
