@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import cv2
+from tf_explain.core.grad_cam import GradCAM
 
 
 MODEL_PATH = "new_sevensix.h5"
